@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  kaijuan:
+    build:
+      context: .
+      network: host
+      dockerfile: Dockerfile
+    ports:
+      - "30080:30080"
+    volumes:
+      # 数据目录（数据库和日志）
+      - ./data:/app/data
+      # 媒体目录映射
+      - /home/mj/data:/mnt/comics
+      # 其他媒体目录映射示例（取消注释并修改为你的实际路径）
+      # - ./media:/mnt/media
+      # - /home/user/downloads:/mnt/downloads
+    environment:
+      - APP_VAR_DIR=/app/data
+      - NODE_ENV=production
+      - PORT=30080
+      - HOST=0.0.0.0
+    restart: unless-stopped

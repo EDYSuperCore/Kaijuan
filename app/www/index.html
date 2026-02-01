@@ -1,0 +1,3241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>开卷 · 图包自动展开工具</title>
+    <link rel="icon" type="image/png" href="/icon.png">
+    <link rel="apple-touch-icon" href="/icon.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        
+        h1 {
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #fafafa;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .section h2 {
+            margin-bottom: 15px;
+            color: #34495e;
+            font-size: 18px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .file-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background: white;
+        }
+        
+        .file-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+        }
+        
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        
+        .file-path {
+            color: #666;
+            word-break: break-all;
+        }
+        
+        .file-size {
+            color: #999;
+            font-size: 12px;
+        }
+        
+        .jobs-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .job-item {
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        
+        .job-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+        
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .job-id {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+        
+        .btn-delete-job {
+            padding: 6px 12px;
+            font-size: 12px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .btn-delete-job:hover:not([disabled]) {
+            background: #c0392b;
+        }
+        
+        .btn-delete-job[disabled] {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .job-status {
+            padding: 6px 14px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .job-status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .job-status.running {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .job-status.success, .job-status.completed {
+            background: #10b981;
+            color: white;
+        }
+        
+        .job-status.failed {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .job-info {
+            font-size: 13px;
+            color: #666;
+            margin-top: 8px;
+            line-height: 1.6;
+        }
+        
+        .job-progress-container {
+            margin-top: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .job-progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .job-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        .job-progress-fill.running {
+            background: linear-gradient(90deg, #3b82f6, #60a5fa, #3b82f6);
+            background-size: 200% 100%;
+            animation: progressShimmer 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes progressShimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        .job-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .btn-view-logs {
+            padding: 6px 12px;
+            font-size: 12px;
+            background: #6b7280;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .btn-view-logs:hover {
+            background: #4b5563;
+        }
+        
+        .job-logs {
+            display: none;
+            margin-top: 12px;
+            padding: 12px;
+            background: #000;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #00ff00;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .job-logs.show {
+            display: block;
+        }
+        
+        .job-logs::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .job-logs::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        
+        .job-logs::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 4px;
+        }
+        
+        .job-logs::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Logo */
+        .app-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        
+        .app-logo img {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+        }
+        
+        .app-logo h1 {
+            margin: 0;
+            font-size: 28px;
+            color: #2c3e50;
+        }
+        
+        /* Navigation */
+        .nav {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .nav a {
+            padding: 8px 16px;
+            text-decoration: none;
+            color: #666;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .nav a:hover {
+            background: #f0f0f0;
+            color: #3498db;
+        }
+        
+        .nav a.active {
+            background: #3498db;
+            color: white;
+        }
+
+        /* Page containers */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* Settings page styles */
+        .radio-group {
+            margin-top: 10px;
+        }
+
+        .radio-option {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .radio-option input[type="radio"] {
+            margin-right: 8px;
+            width: auto;
+        }
+
+        .radio-option label {
+            margin: 0;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .switch-group {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+            margin-right: 10px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #3498db;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .warning-box {
+            margin-top: 10px;
+            padding: 12px;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            color: #856404;
+            font-size: 13px;
+        }
+
+        .disabled-hint {
+            color: #999;
+            font-size: 12px;
+            font-style: italic;
+            margin-top: 5px;
+        }
+
+        /* Job Detail page styles */
+        .job-detail-summary {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .job-detail-summary h2 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .summary-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .summary-item {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .summary-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .summary-value {
+            font-size: 14px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 24px;
+            background: #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .controls-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .controls-bar label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .controls-bar select {
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        .items-table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 500;
+            font-size: 13px;
+            color: #555;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .items-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+        }
+
+        .items-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .path-cell {
+            max-width: 300px;
+            word-break: break-all;
+        }
+
+        .path-full {
+            display: none;
+            position: absolute;
+            background: #333;
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            z-index: 1000;
+            max-width: 500px;
+            word-break: break-all;
+            font-size: 12px;
+        }
+
+        .path-cell:hover .path-full {
+            display: block;
+        }
+
+        .copy-btn {
+            padding: 4px 8px;
+            font-size: 11px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        .copy-btn:hover {
+            background: #5a6268;
+        }
+
+        .status-tag {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .status-tag.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-tag.failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-tag.skipped {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-tag.pending {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-tag.running {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-tag.canceled {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: #28a745;
+            color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 10000;
+            display: none;
+        }
+
+        .toast.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .error-banner {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .error-banner.show {
+            display: block;
+        }
+
+        .version-info {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            font-size: 12px;
+            color: #999;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 4px 8px;
+            border-radius: 4px;
+            z-index: 1000;
+        }
+        
+        /* Dark Mode Styles */
+        body.dark-mode {
+            background: #111827;
+            color: #F3F4F6;
+        }
+        
+        body.dark-mode .container {
+            background: #1F2937;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        body.dark-mode h1,
+        body.dark-mode .app-logo h1 {
+            color: #F3F4F6;
+        }
+        
+        body.dark-mode .section {
+            background: #374151;
+            border-color: #4B5563;
+        }
+        
+        body.dark-mode .section h2 {
+            color: #F3F4F6;
+        }
+        
+        body.dark-mode input[type="text"],
+        body.dark-mode input[type="password"],
+        body.dark-mode select {
+            background: #374151;
+            border-color: #4B5563;
+            color: #F3F4F6;
+        }
+        
+        body.dark-mode .file-list {
+            background: #374151;
+            border-color: #4B5563;
+        }
+        
+        body.dark-mode .job-item {
+            background: #1F2937;
+            border-color: #374151;
+        }
+        
+        body.dark-mode .job-id {
+            color: #F3F4F6;
+        }
+        
+        body.dark-mode .job-info {
+            color: #D1D5DB;
+        }
+        
+        body.dark-mode .job-progress-bar {
+            background: #374151;
+        }
+        
+        body.dark-mode .nav {
+            border-bottom-color: #4B5563;
+        }
+        
+        body.dark-mode .nav a {
+            color: #D1D5DB;
+        }
+        
+        body.dark-mode .nav a:hover {
+            background: #374151;
+            color: #60a5fa;
+        }
+        
+        body.dark-mode .nav a.active {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        body.dark-mode label {
+            color: #D1D5DB;
+        }
+        
+        body.dark-mode .file-item {
+            border-bottom-color: #4B5563;
+        }
+        
+        body.dark-mode .file-path {
+            color: #D1D5DB;
+        }
+        
+        body.dark-mode .version-info {
+            background: rgba(31, 41, 55, 0.9);
+            color: #9CA3AF;
+        }
+        
+        /* Dark Mode Toggle */
+        .dark-mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        body.dark-mode .dark-mode-toggle {
+            background: rgba(31, 41, 55, 0.9);
+        }
+        
+        .dark-mode-toggle:hover {
+            background: rgba(255, 255, 255, 1);
+        }
+        
+        body.dark-mode .dark-mode-toggle:hover {
+            background: rgba(31, 41, 55, 1);
+        }
+        
+        .dark-mode-toggle span {
+            font-size: 14px;
+            color: #333;
+        }
+        
+        body.dark-mode .dark-mode-toggle span {
+            color: #F3F4F6;
+        }
+        
+        .dark-mode-toggle-icon {
+            font-size: 18px;
+        }
+        
+        /* Modal Styles */
+        .config-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        body.dark-mode .config-modal {
+            background: rgba(0,0,0,0.7);
+        }
+        
+        .config-modal.show {
+            display: flex;
+        }
+        
+        .config-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        
+        body.dark-mode .config-modal-content {
+            background: #1F2937;
+        }
+        
+        .config-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .config-modal-header h2 {
+            margin: 0;
+            color: #2c3e50;
+        }
+        
+        body.dark-mode .config-modal-header h2 {
+            color: #F3F4F6;
+        }
+        
+        .config-modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .config-modal-close:hover {
+            background: #f0f0f0;
+        }
+        
+        body.dark-mode .config-modal-close {
+            color: #D1D5DB;
+        }
+        
+        body.dark-mode .config-modal-close:hover {
+            background: #374151;
+        }
+        
+        .config-modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        
+        body.dark-mode .radio-option label {
+            color: #D1D5DB;
+        }
+        
+        body.dark-mode #modalPasswordTryListHint {
+            background: #374151;
+            color: #D1D5DB;
+        }
+        
+        body.dark-mode .job-logs {
+            background: #000;
+            color: #00ff00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- App Logo and Title -->
+        <div class="app-logo">
+            <img src="/icon.png" alt="开卷 Logo">
+            <div>
+                <h1>开卷</h1>
+                <p style="color: #666; margin-top: -5px; margin-bottom: 0; font-size: 14px;">Kaijuan — Archive Unfolder</p>
+            </div>
+        </div>
+        
+        <!-- Navigation -->
+        <div class="nav">
+            <a href="#" id="navHome" class="active">首页</a>
+            <a href="#settings" id="navSettings">设置</a>
+        </div>
+
+        <!-- Home Page -->
+        <div id="pageHome" class="page active">
+            <!-- 扫描和创建任务区域 -->
+            <div class="section">
+                <h2>扫描并创建任务</h2>
+                <div class="form-group">
+                    <label for="rootPath">目录路径:</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="rootPath" placeholder="例如: /volume1/archives" value="" style="flex: 1;">
+                        <button id="selectDirBtn" style="background: #95a5a6; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; white-space: nowrap;">选择目录</button>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button id="scanBtn">扫描</button>
+                    <button id="createJobBtn" disabled>创建任务</button>
+                </div>
+                <div id="scanStatus" class="status"></div>
+                <div id="createJobStatus" class="status"></div>
+                
+                <div id="fileList" class="file-list" style="display: none; margin-top: 15px;">
+                    <div id="fileListContent"></div>
+                </div>
+            </div>
+        
+        <!-- 任务列表区域 -->
+        <div class="section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0;">任务列表</h2>
+                <button id="clearFailedBtn" class="btn" style="background: #e74c3c;">清除失败任务</button>
+            </div>
+            <div id="jobsList" class="jobs-list">
+                <div style="text-align: center; color: #999; padding: 20px;">
+                    暂无任务，请先扫描并创建任务
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div id="pageSettings" class="page">
+            <div class="section">
+                <h2>应用设置</h2>
+                
+                <!-- Conflict Policy -->
+                <div class="form-group">
+                    <label>冲突策略</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="conflictSkip" name="conflict" value="skip">
+                            <label for="conflictSkip">跳过 - 如果目标已存在则跳过该文件</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="conflictOverwrite" name="conflict" value="overwrite">
+                            <label for="conflictOverwrite">覆盖 - 如果目标已存在则覆盖</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="conflictRename" name="conflict" value="rename">
+                            <label for="conflictRename">重命名 - 如果目标已存在则自动重命名</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Output Mode -->
+                <div class="form-group">
+                    <label>输出方式</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="outputSibling" name="outputMode" value="sibling_named_dir">
+                            <label for="outputSibling">同级命名目录 - 在压缩包同级创建同名目录</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="outputInPlace" name="outputMode" value="in_place" disabled>
+                            <label for="outputInPlace" style="color: #999;">原地解压 - 直接解压到压缩包所在目录（暂未实现）</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="outputCustom" name="outputMode" value="custom" disabled>
+                            <label for="outputCustom" style="color: #999;">自定义目录 - 解压到指定目录（暂未实现）</label>
+                        </div>
+                    </div>
+                    <div class="disabled-hint">当前仅支持"同级命名目录"模式</div>
+                </div>
+
+                <!-- Zip Slip Policy -->
+                <div class="form-group">
+                    <label>Zip Slip 防护</label>
+                    <div class="switch-group">
+                        <label class="switch">
+                            <input type="checkbox" id="zipSlipPolicy">
+                            <span class="slider"></span>
+                        </label>
+                        <label for="zipSlipPolicy" style="margin: 0; cursor: pointer;">允许路径穿越（危险）</label>
+                    </div>
+                    <div id="zipSlipWarning" class="warning-box" style="display: none;">
+                        <strong>⚠️ 安全警告：</strong>开启此选项将允许压缩包中的文件解压到目标目录之外，可能导致系统文件被覆盖或泄露。强烈建议保持关闭状态。
+                    </div>
+                </div>
+
+                <!-- Common Passwords -->
+                <div class="form-group">
+                    <label>常用密码</label>
+                    <div style="margin-bottom: 10px; font-size: 13px; color: #666;">
+                        管理常用解压密码列表，用于批量解压加密压缩包
+                    </div>
+                    <div id="commonPasswordsList" style="margin-bottom: 10px;">
+                        <!-- Password items will be dynamically added here -->
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <input type="password" id="newPasswordInput" placeholder="输入新密码" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <button id="addPasswordBtn" style="padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">添加</button>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="margin-top: 20px;">
+                    <button id="resetSettingsBtn" style="background: #95a5a6;">重置为默认</button>
+                    <span id="settingsSaveStatus" style="margin-left: 10px; font-size: 13px; color: #666;"></span>
+                </div>
+                <div id="settingsStatus" class="status"></div>
+            </div>
+        </div>
+
+        <!-- Job Detail Page -->
+        <div id="pageJobDetail" class="page">
+            <div style="margin-bottom: 20px;">
+                <button id="backToJobsBtn" style="background: #95a5a6; margin-bottom: 15px;">← 返回任务列表</button>
+            </div>
+
+            <div id="jobDetailError" class="error-banner"></div>
+
+            <div id="jobDetailContent" style="display: none;">
+                <!-- Summary Card -->
+                <div class="job-detail-summary">
+                    <h2>任务详情 #<span id="jobDetailId"></span></h2>
+                    
+                    <div class="summary-row">
+                        <div class="summary-item">
+                            <div class="summary-label">路径</div>
+                            <div class="summary-value" id="jobDetailRootPath"></div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">状态</div>
+                            <div class="summary-value" id="jobDetailStatus"></div>
+                        </div>
+                    </div>
+
+                    <div class="summary-row">
+                        <div class="summary-item">
+                            <div class="summary-label">进度</div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" id="jobDetailProgressBar" style="width: 0%;">0%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="summary-row">
+                        <div class="summary-item">
+                            <div class="summary-label">成功</div>
+                            <div class="summary-value" id="jobDetailSuccess">0</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">失败</div>
+                            <div class="summary-value" id="jobDetailFailed">0</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">跳过</div>
+                            <div class="summary-value" id="jobDetailSkipped">0</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">已取消</div>
+                            <div class="summary-value" id="jobDetailCanceled">0</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">总计</div>
+                            <div class="summary-value" id="jobDetailTotal">0</div>
+                        </div>
+                    </div>
+
+                    <div class="summary-row">
+                        <div class="summary-item">
+                            <div class="summary-label">创建时间</div>
+                            <div class="summary-value" id="jobDetailCreatedAt"></div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">开始时间</div>
+                            <div class="summary-value" id="jobDetailStartedAt"></div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">结束时间</div>
+                            <div class="summary-value" id="jobDetailEndedAt"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="controls-bar">
+                    <label>
+                        <input type="checkbox" id="autoRefreshToggle" checked>
+                        自动刷新
+                    </label>
+                    <select id="refreshInterval">
+                        <option value="1000">1秒</option>
+                        <option value="2000" selected>2秒</option>
+                        <option value="5000">5秒</option>
+                    </select>
+                    <label>
+                        <input type="checkbox" id="filterFailed">
+                        仅显示失败
+                    </label>
+                    <button id="manualRefreshBtn">手动刷新</button>
+                </div>
+
+                <!-- Items Table -->
+                <div class="section">
+                    <h2>任务项列表</h2>
+                    <div style="overflow-x: auto;">
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30%;">路径</th>
+                                    <th style="width: 10%;">状态</th>
+                                    <th style="width: 30%;">消息</th>
+                                    <th style="width: 20%;">输出目录</th>
+                                    <th style="width: 10%;">耗时</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jobDetailItemsTable">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 20px; color: #999;">
+                                        加载中...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast for copy feedback -->
+    <div id="toast" class="toast">已复制到剪贴板</div>
+    
+    <!-- Version info -->
+    <div id="versionInfo" class="version-info">Version: <span id="versionText">loading...</span></div>
+    
+    <!-- Dark Mode Toggle -->
+    <div class="dark-mode-toggle" id="darkModeToggle">
+        <span class="dark-mode-toggle-icon" id="darkModeIcon">🌙</span>
+        <span id="darkModeText">暗黑模式</span>
+    </div>
+    
+    <!-- Config Modal -->
+    <div id="configModal" class="config-modal">
+        <div class="config-modal-content">
+            <div class="config-modal-header">
+                <h2>创建解压任务</h2>
+                <button class="config-modal-close" id="closeConfigModal">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label>解压密码</label>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="modalPasswordNone" name="modalPasswordMode" value="none" checked>
+                        <label for="modalPasswordNone">不使用密码</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="modalPasswordSelect" name="modalPasswordMode" value="select">
+                        <label for="modalPasswordSelect">从常用密码选择</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="modalPasswordManual" name="modalPasswordMode" value="manual">
+                        <label for="modalPasswordManual">本次手动输入</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="modalPasswordTryList" name="modalPasswordMode" value="try_list">
+                        <label for="modalPasswordTryList">挨个尝试常用密码</label>
+                    </div>
+                </div>
+                
+                <!-- Password Select Dropdown -->
+                <div id="modalPasswordSelectGroup" style="display: none; margin-top: 10px;">
+                    <select id="modalPasswordSelectDropdown" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="">请选择密码</option>
+                    </select>
+                </div>
+                
+                <!-- Manual Password Input -->
+                <div id="modalPasswordManualGroup" style="display: none; margin-top: 10px;">
+                    <input type="password" id="modalPasswordManualInput" placeholder="输入解压密码" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                
+                <!-- Try List Hint -->
+                <div id="modalPasswordTryListHint" style="display: none; margin-top: 10px; padding: 8px; background: #e7f3ff; border-radius: 4px; font-size: 13px; color: #666;">
+                    将按常用密码顺序依次尝试，直到成功或全部失败
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>冲突策略</label>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="modalConflictSkip" name="modalConflict" value="skip">
+                        <label for="modalConflictSkip">跳过 - 如果目标已存在则跳过该文件</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="modalConflictOverwrite" name="modalConflict" value="overwrite">
+                        <label for="modalConflictOverwrite">覆盖 - 如果目标已存在则覆盖</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="modalConflictRename" name="modalConflict" value="rename">
+                        <label for="modalConflictRename">重命名 - 如果目标已存在则自动重命名</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="configModalStatus" class="status" style="display: none;"></div>
+            
+            <div class="config-modal-footer">
+                <button id="cancelConfigBtn" style="background: #95a5a6; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">取消</button>
+                <button id="confirmConfigBtn" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">确认开始</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Directory Selector Modal -->
+    <div id="dirSelectorModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 30px; border-radius: 8px; max-width: 600px; width: 90%; max-height: 80vh; box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">选择目录</h2>
+                <button id="closeDirSelector" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
+                <button id="dirSelectorGoRoot" style="background: #95a5a6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">回到根目录</button>
+                <button id="dirSelectorGoUp" style="background: #95a5a6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">返回上一级</button>
+                <div style="flex: 1; padding: 8px; background: #f5f5f5; border-radius: 4px; font-size: 13px; word-break: break-all;" id="dirSelectorCurrentPath">/</div>
+            </div>
+            
+            <div id="dirSelectorLoading" style="text-align: center; padding: 20px; color: #999; display: none;">加载中...</div>
+            <div id="dirSelectorError" class="error-banner" style="display: none;"></div>
+            
+            <div id="dirSelectorList" style="flex: 1; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; min-height: 200px; max-height: 400px;">
+                <!-- Directory items will be rendered here -->
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button id="dirSelectorCancel" style="background: #95a5a6; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">取消</button>
+                <button id="dirSelectorConfirm" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">选择当前目录</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Retry Job Modal -->
+    <div id="retryJobModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">重试任务</h2>
+                <button id="closeRetryModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+            </div>
+            
+            <div id="retryJobError" class="error-banner" style="display: none;"></div>
+            
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>解压密码</label>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="retryPasswordNone" name="retryPasswordMode" value="none" checked>
+                        <label for="retryPasswordNone">不使用密码</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="retryPasswordSelect" name="retryPasswordMode" value="select">
+                        <label for="retryPasswordSelect">从常用密码选择</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="retryPasswordManual" name="retryPasswordMode" value="manual">
+                        <label for="retryPasswordManual">本次手动输入</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="retryPasswordTryList" name="retryPasswordMode" value="try_list">
+                        <label for="retryPasswordTryList">挨个尝试常用密码</label>
+                    </div>
+                </div>
+                
+                <div id="retryPasswordSelectGroup" style="display: none; margin-top: 10px;">
+                    <select id="retryPasswordSelectDropdown" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="">请选择密码</option>
+                    </select>
+                </div>
+                
+                <div id="retryPasswordManualGroup" style="display: none; margin-top: 10px;">
+                    <input type="password" id="retryPasswordManualInput" placeholder="输入解压密码" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                
+                <div id="retryPasswordTryListHint" style="display: none; margin-top: 10px; padding: 8px; background: #e7f3ff; border-radius: 4px; font-size: 13px; color: #666;">
+                    将按常用密码顺序依次尝试，直到成功或全部失败
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button id="cancelRetryBtn" style="background: #95a5a6; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">取消</button>
+                <button id="confirmRetryBtn" style="background: #f39c12; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">确认重试</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = '/api';
+        let selectedFiles = [];
+        let pollInterval = null;
+        let currentSettings = null;
+        let commonPasswords = []; // Editable common passwords list
+        let jobLogCache = {}; // Cache for job logs (jobId -> content)
+        const DEFAULT_SETTINGS = {
+            conflict: 'skip',
+            outputMode: 'sibling_named_dir',
+            zipSlipPolicy: 'block'
+        };
+        
+        // Password preview configuration
+        const PASSWORD_PREVIEW_LEN = 4; // Fixed preview length (can be made configurable later)
+        
+        // Auto-save state
+        let autoSaveTimer = null;
+        let isSaving = false;
+        let pendingSave = null;
+        let saveRequestId = 0;
+
+        // ========== Routing ==========
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+
+            document.querySelectorAll('.nav a').forEach(link => {
+                link.classList.remove('active');
+            });
+            if (pageId === 'pageHome') {
+                document.getElementById('navHome').classList.add('active');
+            } else if (pageId === 'pageSettings') {
+                document.getElementById('navSettings').classList.add('active');
+            }
+        }
+
+        // Handle hash routing
+        function handleRoute() {
+            const hash = window.location.hash;
+            if (hash === '#settings') {
+                showPage('pageSettings');
+                loadSettings();
+            } else if (hash.startsWith('#jobs/')) {
+                const jobId = hash.substring(6);
+                if (jobId && /^\d+$/.test(jobId)) {
+                    showPage('pageJobDetail');
+                    loadJobDetail(parseInt(jobId));
+                } else {
+                    showPage('pageHome');
+                }
+            } else {
+                showPage('pageHome');
+            }
+        }
+
+        window.addEventListener('hashchange', handleRoute);
+        window.addEventListener('load', handleRoute);
+
+        // Navigation click handlers
+        document.getElementById('navHome').addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.hash = '';
+            showPage('pageHome');
+        });
+
+        document.getElementById('navSettings').addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.hash = 'settings';
+            showPage('pageSettings');
+            loadSettings();
+        });
+
+        // ========== Settings Page ==========
+        async function loadSettings() {
+            try {
+                const res = await fetch(`${API_BASE}/settings`);
+                const data = await res.json();
+                
+                if (data.error) {
+                    showStatus('settingsStatus', `加载设置失败: ${data.error}`, true);
+                    return;
+                }
+
+                // If settings is null (not configured), use default values for UI display only
+                // User must save settings before submitting jobs
+                if (!data || data === null) {
+                    currentSettings = null;
+                    commonPasswords = [];
+                    // Apply default values to form for display, but these are not saved
+                    applySettingsToForm({
+                        conflict: 'skip',
+                        outputMode: 'sibling_named_dir',
+                        zipSlipPolicy: 'block',
+                        commonPasswords: []
+                    });
+                    showStatus('settingsStatus', '设置未配置，请完成配置后保存', false);
+                    return;
+                }
+
+                currentSettings = data;
+                applySettingsToForm(data);
+                // Update password dropdown when settings are loaded
+                updatePasswordSelectDropdown();
+                updateModalPasswordSelectDropdown();
+            } catch (err) {
+                showStatus('settingsStatus', `加载设置失败: ${err.message}`, true);
+            }
+        }
+
+        function applySettingsToForm(settings) {
+            // Conflict
+            document.getElementById(`conflict${settings.conflict.charAt(0).toUpperCase() + settings.conflict.slice(1)}`).checked = true;
+
+            // Output Mode
+            const outputModeMap = {
+                'sibling_named_dir': 'outputSibling',
+                'in_place': 'outputInPlace',
+                'custom': 'outputCustom'
+            };
+            const outputRadioId = outputModeMap[settings.outputMode] || 'outputSibling';
+            document.getElementById(outputRadioId).checked = true;
+
+            // Zip Slip Policy
+            document.getElementById('zipSlipPolicy').checked = settings.zipSlipPolicy === 'allow';
+            updateZipSlipWarning(settings.zipSlipPolicy === 'allow');
+
+            // Common Passwords
+            commonPasswords = settings.commonPasswords || [];
+            renderPasswordList();
+        }
+
+        /**
+         * Get password preview (prefix + mask)
+         * @param {string} password - Full password
+         * @param {number} previewLen - Preview length (default: PASSWORD_PREVIEW_LEN)
+         * @returns {string} Preview string like "abc••••"
+         */
+        function getPasswordPreview(password, previewLen = PASSWORD_PREVIEW_LEN) {
+            if (!password || password.length === 0) {
+                return '••••';
+            }
+            const prefix = password.slice(0, Math.min(previewLen, password.length));
+            const mask = '••••';
+            return `${prefix}${mask}`;
+        }
+
+        /**
+         * Get password preview for logging (safe, no full password)
+         */
+        function getPasswordPreviewForLog(password, index, previewLen = PASSWORD_PREVIEW_LEN) {
+            const preview = getPasswordPreview(password, previewLen);
+            return `${preview}(#${index + 1})`;
+        }
+
+        function renderPasswordList() {
+            const listEl = document.getElementById('commonPasswordsList');
+            listEl.innerHTML = '';
+            
+            if (commonPasswords.length === 0) {
+                listEl.innerHTML = '<div style="color: #999; font-size: 13px; padding: 10px;">暂无常用密码</div>';
+                return;
+            }
+
+            commonPasswords.forEach((pwd, index) => {
+                const item = document.createElement('div');
+                item.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px; margin-bottom: 8px;';
+                
+                const indexSpan = document.createElement('span');
+                indexSpan.textContent = `#${index + 1}`;
+                indexSpan.style.cssText = 'font-weight: 500; color: #666; min-width: 30px;';
+                
+                // Password preview display (prefix + mask)
+                const pwdDisplay = document.createElement('span');
+                const preview = getPasswordPreview(pwd);
+                pwdDisplay.textContent = preview;
+                pwdDisplay.style.cssText = 'flex: 1; font-family: monospace; font-size: 13px;';
+                pwdDisplay.dataset.password = pwd;
+                pwdDisplay.dataset.showingFull = 'false';
+                pwdDisplay.style.cursor = 'pointer';
+                pwdDisplay.title = '点击显示完整密码（仅本地查看）';
+                
+                // Eye icon button for show/hide
+                const eyeBtn = document.createElement('button');
+                eyeBtn.textContent = '👁';
+                eyeBtn.style.cssText = 'padding: 4px 8px; background: #6c757d; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;';
+                eyeBtn.title = '显示/隐藏完整密码';
+                eyeBtn.onclick = function() {
+                    const showingFull = pwdDisplay.dataset.showingFull === 'true';
+                    if (showingFull) {
+                        pwdDisplay.textContent = preview;
+                        pwdDisplay.dataset.showingFull = 'false';
+                    } else {
+                        pwdDisplay.textContent = pwd;
+                        pwdDisplay.dataset.showingFull = 'true';
+                        // Auto-hide after 3 seconds
+                        setTimeout(() => {
+                            if (pwdDisplay.dataset.showingFull === 'true') {
+                                pwdDisplay.textContent = preview;
+                                pwdDisplay.dataset.showingFull = 'false';
+                            }
+                        }, 3000);
+                    }
+                };
+                
+                const upBtn = document.createElement('button');
+                upBtn.textContent = '↑';
+                upBtn.style.cssText = 'padding: 4px 8px; background: #95a5a6; color: white; border: none; border-radius: 3px; cursor: pointer;';
+                upBtn.disabled = index === 0;
+                upBtn.onclick = () => {
+                    if (index > 0) {
+                        [commonPasswords[index], commonPasswords[index - 1]] = [commonPasswords[index - 1], commonPasswords[index]];
+                        renderPasswordList();
+                        scheduleAutoSave();
+                    }
+                };
+                
+                const downBtn = document.createElement('button');
+                downBtn.textContent = '↓';
+                downBtn.style.cssText = 'padding: 4px 8px; background: #95a5a6; color: white; border: none; border-radius: 3px; cursor: pointer;';
+                downBtn.disabled = index === commonPasswords.length - 1;
+                downBtn.onclick = () => {
+                    if (index < commonPasswords.length - 1) {
+                        [commonPasswords[index], commonPasswords[index + 1]] = [commonPasswords[index + 1], commonPasswords[index]];
+                        renderPasswordList();
+                        scheduleAutoSave();
+                    }
+                };
+                
+                const delBtn = document.createElement('button');
+                delBtn.textContent = '删除';
+                delBtn.style.cssText = 'padding: 4px 8px; background: #e74c3c; color: white; border: none; border-radius: 3px; cursor: pointer;';
+                delBtn.onclick = () => {
+                    commonPasswords.splice(index, 1);
+                    renderPasswordList();
+                    scheduleAutoSave();
+                };
+                
+                item.appendChild(indexSpan);
+                item.appendChild(pwdDisplay);
+                item.appendChild(eyeBtn);
+                item.appendChild(upBtn);
+                item.appendChild(downBtn);
+                item.appendChild(delBtn);
+                listEl.appendChild(item);
+            });
+        }
+
+        // Add password button event
+        document.getElementById('addPasswordBtn').addEventListener('click', () => {
+            const input = document.getElementById('newPasswordInput');
+            const pwd = input.value.trim();
+            if (pwd) {
+                commonPasswords.push(pwd);
+                input.value = '';
+                renderPasswordList();
+                // Log preview only (no full password)
+                const previews = commonPasswords.map((p, i) => getPasswordPreviewForLog(p, i));
+                console.log('[settings] Added password, current count:', commonPasswords.length, 'previews:', previews);
+                scheduleAutoSave();
+            } else {
+                showStatus('settingsStatus', '请输入密码', true);
+            }
+        });
+
+        // Enter key support for password input
+        document.getElementById('newPasswordInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('addPasswordBtn').click();
+            }
+        });
+
+        function updateZipSlipWarning(enabled) {
+            const warning = document.getElementById('zipSlipWarning');
+            warning.style.display = enabled ? 'block' : 'none';
+        }
+
+        document.getElementById('zipSlipPolicy').addEventListener('change', (e) => {
+            updateZipSlipWarning(e.target.checked);
+        });
+
+        /**
+         * Schedule auto-save with debounce
+         * Debounce time: 500ms
+         */
+        function scheduleAutoSave() {
+            // Clear existing timer
+            if (autoSaveTimer) {
+                clearTimeout(autoSaveTimer);
+            }
+
+            // Store current state as pending save
+            pendingSave = {
+                conflict: document.querySelector('input[name="conflict"]:checked')?.value,
+                outputMode: document.querySelector('input[name="outputMode"]:checked')?.value,
+                zipSlipPolicy: document.getElementById('zipSlipPolicy').checked ? 'allow' : 'block',
+                commonPasswords: [...commonPasswords] // Copy array
+            };
+
+            // Set new timer
+            autoSaveTimer = setTimeout(() => {
+                performAutoSave();
+            }, 500);
+        }
+
+        /**
+         * Perform auto-save (with concurrent control)
+         */
+        async function performAutoSave() {
+            // If already saving, mark that we have pending changes
+            if (isSaving) {
+                return; // Will be handled after current save completes
+            }
+
+            if (!pendingSave) {
+                return; // Nothing to save
+            }
+
+            isSaving = true;
+            const currentRequestId = ++saveRequestId;
+            const saveData = { ...pendingSave };
+            pendingSave = null;
+
+            // Update status
+            const statusEl = document.getElementById('settingsSaveStatus');
+            statusEl.textContent = '保存中...';
+            statusEl.style.color = '#666';
+
+            try {
+                // Log preview only (no full passwords)
+                const previews = saveData.commonPasswords.map((p, i) => getPasswordPreviewForLog(p, i));
+                console.log('[settings] auto-save payload', {
+                    conflict: saveData.conflict,
+                    outputMode: saveData.outputMode,
+                    zipSlipPolicy: saveData.zipSlipPolicy,
+                    commonPasswordsCount: saveData.commonPasswords.length,
+                    commonPasswordsPreview: previews
+                });
+
+                const res = await fetch(`${API_BASE}/settings`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(saveData)
+                });
+
+                const data = await res.json();
+
+                // Only process if this is the latest request
+                if (currentRequestId !== saveRequestId) {
+                    console.log('[settings] Ignoring outdated save response');
+                    return;
+                }
+
+                // Log response (no passwords)
+                console.log('[settings] auto-save response', {
+                    status: res.status,
+                    ok: res.ok,
+                    requestId: currentRequestId,
+                    error: data.error || null
+                });
+
+                if (!res.ok || data.error) {
+                    throw new Error(data.error || 'Unknown error');
+                }
+
+                // Success
+                currentSettings = data;
+                commonPasswords = data.commonPasswords || [];
+                renderPasswordList();
+                
+                statusEl.textContent = '已自动保存';
+                statusEl.style.color = '#28a745';
+                setTimeout(() => {
+                    if (statusEl.textContent === '已自动保存') {
+                        statusEl.textContent = '';
+                    }
+                }, 2000);
+
+                // If there are new pending changes, save again
+                if (pendingSave) {
+                    setTimeout(() => performAutoSave(), 100);
+                }
+            } catch (err) {
+                console.error('[settings] auto-save error:', err);
+                
+                // Only show error if this is the latest request
+                if (currentRequestId === saveRequestId) {
+                    statusEl.textContent = '保存失败，点击重试';
+                    statusEl.style.color = '#e74c3c';
+                    statusEl.style.cursor = 'pointer';
+                    statusEl.onclick = () => {
+                        scheduleAutoSave();
+                        setTimeout(() => performAutoSave(), 100);
+                    };
+                    
+                    showStatus('settingsStatus', `保存失败: ${err.message}`, true);
+                }
+            } finally {
+                if (currentRequestId === saveRequestId) {
+                    isSaving = false;
+                }
+            }
+        }
+
+        // Auto-save on conflict/outputMode/zipSlipPolicy changes
+        document.querySelectorAll('input[name="conflict"]').forEach(radio => {
+            radio.addEventListener('change', scheduleAutoSave);
+        });
+        document.querySelectorAll('input[name="outputMode"]').forEach(radio => {
+            radio.addEventListener('change', scheduleAutoSave);
+        });
+        document.getElementById('zipSlipPolicy').addEventListener('change', scheduleAutoSave);
+
+        // Reset to default
+        document.getElementById('resetSettingsBtn').addEventListener('click', () => {
+            commonPasswords = [];
+            applySettingsToForm({ ...DEFAULT_SETTINGS, commonPasswords: [] });
+            updateZipSlipWarning(false);
+            showStatus('settingsStatus', '已重置为默认值（未保存）', false);
+        });
+
+        // ========== Home Page ==========
+        // 检查健康状态
+        async function checkHealth() {
+            try {
+                const res = await fetch(`${API_BASE}/health`);
+                const data = await res.json();
+                console.log('Health check:', data);
+                return data.ok;
+            } catch (err) {
+                console.error('Health check failed:', err);
+                return false;
+            }
+        }
+        
+        // 显示状态消息
+        function showStatus(elementId, message, isError = false) {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.className = `status ${isError ? 'error' : 'success'}`;
+            el.style.display = 'block';
+            setTimeout(() => {
+                el.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Config Modal Management
+        function showConfigModal() {
+            const modal = document.getElementById('configModal');
+            modal.classList.add('show');
+            
+            // Load settings and update modal
+            loadSettingsForModal();
+        }
+        
+        function hideConfigModal() {
+            const modal = document.getElementById('configModal');
+            modal.classList.remove('show');
+        }
+        
+        async function loadSettingsForModal() {
+            try {
+                const res = await fetch(`${API_BASE}/settings`);
+                const data = await res.json();
+                
+                // Initialize conflict policy radio buttons
+                // First, clear all checked states to avoid default HTML checked attribute interfering
+                document.querySelectorAll('input[name="modalConflict"]').forEach(radio => {
+                    radio.checked = false;
+                });
+                
+                if (data && data !== null) {
+                    // Set conflict policy from settings
+                    const conflictValue = data.conflict || 'skip';
+                    const conflictRadioId = `modalConflict${conflictValue.charAt(0).toUpperCase() + conflictValue.slice(1)}`;
+                    const conflictRadio = document.getElementById(conflictRadioId);
+                    
+                    if (conflictRadio) {
+                        conflictRadio.checked = true;
+                    } else {
+                        // Fallback to skip if not found
+                        document.getElementById('modalConflictSkip').checked = true;
+                    }
+                    
+                    // Update password dropdown
+                    updateModalPasswordSelectDropdown();
+                } else {
+                    // Default to skip if no settings
+                    document.getElementById('modalConflictSkip').checked = true;
+                }
+            } catch (err) {
+                console.error('Failed to load settings for modal:', err);
+                // Clear all and default to skip on error
+                document.querySelectorAll('input[name="modalConflict"]').forEach(radio => {
+                    radio.checked = false;
+                });
+                document.getElementById('modalConflictSkip').checked = true;
+            }
+        }
+        
+        // Bind modal events
+        document.getElementById('closeConfigModal').addEventListener('click', hideConfigModal);
+        document.getElementById('cancelConfigBtn').addEventListener('click', hideConfigModal);
+        
+        // Close modal when clicking outside
+        document.getElementById('configModal').addEventListener('click', (e) => {
+            if (e.target.id === 'configModal') {
+                hideConfigModal();
+            }
+        });
+        
+        // 扫描目录
+        document.getElementById('scanBtn').addEventListener('click', async () => {
+            const rootPath = document.getElementById('rootPath').value.trim();
+            if (!rootPath) {
+                showStatus('scanStatus', '请输入目录路径', true);
+                return;
+            }
+            
+            const btn = document.getElementById('scanBtn');
+            btn.disabled = true;
+            btn.textContent = '扫描中...';
+            
+            try {
+                const res = await fetch(`${API_BASE}/scan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        rootPath: rootPath,
+                        recursive: true,
+                        exts: ['.zip', '.cbz'],
+                        ignoreDirs: ['@eaDir', '#recycle', '.Trash']
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.error) {
+                    showStatus('scanStatus', data.error, true);
+                    return;
+                }
+                
+                selectedFiles = data.items || [];
+                showStatus('scanStatus', `找到 ${data.total} 个文件${data.truncated ? ' (已截断，超过5000个)' : ''}`);
+                
+                // 显示文件列表
+                const fileList = document.getElementById('fileList');
+                const fileListContent = document.getElementById('fileListContent');
+                
+                if (selectedFiles.length > 0) {
+                    fileList.style.display = 'block';
+                    fileListContent.innerHTML = selectedFiles.slice(0, 100).map(item => `
+                        <div class="file-item">
+                            <div class="file-path">${escapeHtml(item.path)}</div>
+                            <div class="file-size">${formatSize(item.size)}</div>
+                        </div>
+                    `).join('');
+                    
+                    if (selectedFiles.length > 100) {
+                        const moreDiv = document.createElement('div');
+                        moreDiv.style.cssText = 'padding: 10px; text-align: center; color: #999;';
+                        moreDiv.textContent = `... 还有 ${selectedFiles.length - 100} 个文件`;
+                        fileListContent.appendChild(moreDiv);
+                    }
+                    
+                    document.getElementById('createJobBtn').disabled = false;
+                } else {
+                    fileList.style.display = 'none';
+                    document.getElementById('createJobBtn').disabled = true;
+                }
+                
+            } catch (err) {
+                showStatus('scanStatus', `扫描失败: ${err.message}`, true);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '扫描';
+            }
+        });
+        
+        // Password mode change handlers (for modal)
+        document.querySelectorAll('input[name="modalPasswordMode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const mode = e.target.value;
+                document.getElementById('modalPasswordSelectGroup').style.display = mode === 'select' ? 'block' : 'none';
+                document.getElementById('modalPasswordManualGroup').style.display = mode === 'manual' ? 'block' : 'none';
+                document.getElementById('modalPasswordTryListHint').style.display = mode === 'try_list' ? 'block' : 'none';
+                
+                // Update password select dropdown when switching to select mode
+                if (mode === 'select') {
+                    updateModalPasswordSelectDropdown();
+                }
+            });
+        });
+
+        function updatePasswordSelectDropdown() {
+            const dropdown = document.getElementById('passwordSelectDropdown');
+            if (!dropdown) return;
+            dropdown.innerHTML = '<option value="">请选择密码</option>';
+            
+            if (currentSettings && currentSettings.commonPasswords && currentSettings.commonPasswords.length > 0) {
+                currentSettings.commonPasswords.forEach((pwd, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    const preview = getPasswordPreview(pwd);
+                    option.textContent = `${preview} (#${index + 1})`;
+                    dropdown.appendChild(option);
+                });
+            }
+        }
+        
+        function updateModalPasswordSelectDropdown() {
+            const dropdown = document.getElementById('modalPasswordSelectDropdown');
+            if (!dropdown) return;
+            dropdown.innerHTML = '<option value="">请选择密码</option>';
+            
+            if (currentSettings && currentSettings.commonPasswords && currentSettings.commonPasswords.length > 0) {
+                currentSettings.commonPasswords.forEach((pwd, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    const preview = getPasswordPreview(pwd);
+                    option.textContent = `${preview} (#${index + 1})`;
+                    dropdown.appendChild(option);
+                });
+            }
+        }
+
+        // 创建任务按钮 - 打开配置弹窗
+        document.getElementById('createJobBtn').addEventListener('click', () => {
+            if (selectedFiles.length === 0) {
+                showStatus('createJobStatus', '请先扫描文件', true);
+                return;
+            }
+            
+            const rootPath = document.getElementById('rootPath').value.trim();
+            if (!rootPath) {
+                showStatus('createJobStatus', '请输入目录路径', true);
+                return;
+            }
+            
+            showConfigModal();
+        });
+        
+        // 确认创建任务（在弹窗中）
+        document.getElementById('confirmConfigBtn').addEventListener('click', async () => {
+            if (selectedFiles.length === 0) {
+                showStatus('configModalStatus', '请先扫描文件', true);
+                document.getElementById('configModalStatus').style.display = 'block';
+                return;
+            }
+            
+            const rootPath = document.getElementById('rootPath').value.trim();
+            if (!rootPath) {
+                showStatus('configModalStatus', '请输入目录路径', true);
+                document.getElementById('configModalStatus').style.display = 'block';
+                return;
+            }
+            
+            // 提交任务前必须从已保存的设置读取 jobOptions（不从 UI 临时值取）
+            // 强制重新获取 settings，确保使用最新保存的值
+            let settings;
+            try {
+                const settingsRes = await fetch(`${API_BASE}/settings`);
+                if (!settingsRes.ok) {
+                    showStatus('configModalStatus', '无法加载设置，请先配置任务选项', true);
+                    document.getElementById('configModalStatus').style.display = 'block';
+                    return;
+                }
+                settings = await settingsRes.json();
+            } catch (err) {
+                console.error('Failed to load settings:', err);
+                showStatus('configModalStatus', '无法加载设置，请先配置任务选项', true);
+                document.getElementById('configModalStatus').style.display = 'block';
+                return;
+            }
+            
+            // 严格校验：从 settings 解析 jobOptions，缺失任意字段则阻断提交
+            if (!settings || typeof settings !== 'object') {
+                showStatus('configModalStatus', '设置未配置，请先前往设置页面完成配置并保存', true);
+                document.getElementById('configModalStatus').style.display = 'block';
+                return;
+            }
+            
+            // 解析 settings 为 jobOptions（字段映射：settings.conflict -> jobOptions.conflictPolicy）
+            // 获取弹窗中选择的冲突策略（loadSettingsForModal 已根据设置初始化，所以这里获取到的应该是设置中的值，除非用户手动改变了）
+            const modalConflict = document.querySelector('input[name="modalConflict"]:checked')?.value;
+            // 优先使用弹窗中选择的值（如果用户手动选择了，会使用用户选择的值）
+            // 否则使用设置中的默认值（确保全局设置生效）
+            // 注意：由于 loadSettingsForModal 已经根据设置初始化了单选按钮，所以 modalConflict 应该总是有值
+            const conflictPolicy = modalConflict || settings.conflict;
+            const outputMode = settings.outputMode;
+            const zipSlipPolicy = settings.zipSlipPolicy;
+            
+            // 校验：任意字段缺失/为空则阻断
+            const missingFields = [];
+            if (!conflictPolicy || conflictPolicy === null || conflictPolicy === '') {
+                missingFields.push('conflictPolicy (冲突策略)');
+            }
+            if (!outputMode || outputMode === null || outputMode === '') {
+                missingFields.push('outputMode (输出方式)');
+            }
+            if (!zipSlipPolicy || zipSlipPolicy === null || zipSlipPolicy === '') {
+                missingFields.push('zipSlipPolicy (路径穿越策略)');
+            }
+            
+            if (missingFields.length > 0) {
+                const missingList = missingFields.join('、');
+                showStatus('configModalStatus', `设置不完整，缺少必填字段：${missingList}。请前往设置页面完成配置并保存。`, true);
+                document.getElementById('configModalStatus').style.display = 'block';
+                return;
+            }
+            
+            // Get password mode and validate
+            const passwordMode = document.querySelector('input[name="modalPasswordMode"]:checked').value;
+            const jobOptions = {
+                conflictPolicy: conflictPolicy,
+                outputMode: outputMode,
+                zipSlipPolicy: zipSlipPolicy
+            };
+            
+            // Add password fields based on mode
+            if (passwordMode !== 'none') {
+                jobOptions.passwordMode = passwordMode;
+                
+                if (passwordMode === 'select') {
+                    const passwordRefIndex = parseInt(document.getElementById('modalPasswordSelectDropdown').value);
+                    if (isNaN(passwordRefIndex) || passwordRefIndex < 0) {
+                        showStatus('configModalStatus', '请选择常用密码', true);
+                        document.getElementById('configModalStatus').style.display = 'block';
+                        return;
+                    }
+                    jobOptions.passwordRefIndex = passwordRefIndex;
+                    // Log selected password preview (for user confirmation)
+                    const selectedPwd = settings.commonPasswords?.[passwordRefIndex];
+                    if (selectedPwd) {
+                        const preview = getPasswordPreview(selectedPwd);
+                        console.log('[job] Selected password preview:', `${preview} (#${passwordRefIndex + 1})`);
+                    }
+                } else if (passwordMode === 'manual') {
+                    const passwordValue = document.getElementById('modalPasswordManualInput').value.trim();
+                    if (!passwordValue) {
+                        showStatus('configModalStatus', '请输入解压密码', true);
+                        document.getElementById('configModalStatus').style.display = 'block';
+                        return;
+                    }
+                    jobOptions.passwordValue = passwordValue;
+                } else if (passwordMode === 'try_list') {
+                    const commonPasswords = settings.commonPasswords || [];
+                    if (commonPasswords.length === 0) {
+                        showStatus('configModalStatus', '常用密码列表为空，请前往设置页面添加密码', true);
+                        document.getElementById('configModalStatus').style.display = 'block';
+                        return;
+                    }
+                    jobOptions.passwordTryOrder = 'as_is';
+                }
+            }
+            
+            const btn = document.getElementById('confirmConfigBtn');
+            btn.disabled = true;
+            btn.textContent = '创建中...';
+            
+            try {
+                // 调用 /api/job-submissions 接口
+                // jobOptions 必须从已保存的 settings 中解析，原样提交
+                const res = await fetch(`${API_BASE}/job-submissions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        rootPath: rootPath,
+                        items: selectedFiles.map(f => f.path),
+                        jobOptions: jobOptions
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (!res.ok || data.error) {
+                    // 处理错误响应，显示详细信息
+                    let errorMsg = data.error || 'Unknown error';
+                    if (data.missing && Array.isArray(data.missing)) {
+                        errorMsg = `缺少必填字段: ${data.missing.join(', ')}`;
+                    } else if (data.message) {
+                        errorMsg = data.message;
+                    }
+                    showStatus('configModalStatus', errorMsg, true);
+                    document.getElementById('configModalStatus').style.display = 'block';
+                    return;
+                }
+                
+                showStatus('createJobStatus', `任务创建成功，ID: ${data.jobId}`);
+                hideConfigModal();
+                
+                // 开始轮询任务列表
+                startPolling();
+                
+            } catch (err) {
+                showStatus('configModalStatus', `创建失败: ${err.message}`, true);
+                document.getElementById('configModalStatus').style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '确认开始';
+            }
+        });
+        
+        // 获取任务列表
+        async function fetchJobs() {
+            try {
+                const res = await fetch(`${API_BASE}/jobs`);
+                const data = await res.json();
+                
+                if (data.error) {
+                    console.error('Fetch jobs error:', data.error);
+                    return;
+                }
+                
+                renderJobs(data.jobs || []);
+            } catch (err) {
+                console.error('Fetch jobs failed:', err);
+            }
+        }
+        
+        // 渲染任务列表
+        function renderJobs(jobs) {
+            const jobsList = document.getElementById('jobsList');
+            
+            // 保存当前展开的日志区域状态（在重新渲染前）
+            const expandedLogs = new Set();
+            jobsList.querySelectorAll('.job-logs.show').forEach(logsEl => {
+                const jobId = logsEl.id.replace('job-logs-', '');
+                expandedLogs.add(jobId);
+            });
+            
+            if (jobs.length === 0) {
+                jobsList.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">暂无任务</div>';
+                return;
+            }
+            
+            // 判断任务是否可删除（仅终态：completed/failed/canceled）
+            const isDeletable = (status) => {
+                const terminalStatuses = ['completed', 'failed', 'canceled'];
+                return terminalStatuses.includes(status);
+            };
+            
+            jobsList.innerHTML = jobs.map(job => {
+                const statusClass = job.status || 'pending';
+                const progress = job.total > 0 
+                    ? `成功: ${job.success || 0} / 失败: ${job.failed || 0} / 跳过: ${job.skipped || 0} / 总计: ${job.total}`
+                    : '等待中...';
+                
+                const canDelete = isDeletable(job.status);
+                const canRetry = job.status === 'failed';
+                const retryFromInfo = job.retryFromJobId ? ` (重试自任务 #${escapeHtml(String(job.retryFromJobId))})` : '';
+                
+                // 计算进度百分比
+                const total = job.total || 0;
+                const done = (job.success || 0) + (job.failed || 0) + (job.skipped || 0) + (job.canceled || 0);
+                const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+                const isRunning = job.status === 'running';
+                
+                return `
+                    <div class="job-item" data-job-id="${escapeHtml(String(job.id))}">
+                        <div class="job-header">
+                            <span class="job-id">任务 #${escapeHtml(String(job.id))}${escapeHtml(retryFromInfo)}</span>
+                            <span class="job-status ${escapeHtml(statusClass)}">${escapeHtml(getStatusText(job.status))}</span>
+                            <div style="display: flex; gap: 5px;">
+                                ${canRetry 
+                                    ? `<button class="btn-retry-job" data-job-id="${job.id}" title="重试任务" style="background: #f39c12; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">重试</button>`
+                                    : ''
+                                }
+                                ${canDelete 
+                                    ? `<button class="btn-delete-job" data-job-id="${job.id}" title="删除任务">删除</button>`
+                                    : `<button class="btn-delete-job" disabled title="进行中的任务无法删除">删除</button>`
+                                }
+                            </div>
+                        </div>
+                        <div class="job-info">
+                            <div>路径: ${escapeHtml(job.rootPath || '')}</div>
+                            <div>${escapeHtml(progress)}</div>
+                            <div>创建时间: ${escapeHtml(formatTime(job.createdAt))}</div>
+                            ${job.startedAt ? `<div>开始时间: ${escapeHtml(formatTime(job.startedAt))}</div>` : ''}
+                            ${job.endedAt ? `<div>结束时间: ${escapeHtml(formatTime(job.endedAt))}</div>` : ''}
+                            ${job.lastError ? `<div style="color: #e74c3c; margin-top: 5px;">错误: ${escapeHtml(job.lastError)}</div>` : ''}
+                        </div>
+                        ${total > 0 ? `
+                            <div class="job-progress-container">
+                                <div class="job-progress-bar">
+                                    <div class="job-progress-fill ${isRunning ? 'running' : ''}" style="width: ${percent}%;"></div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        <div class="job-actions">
+                            <button class="btn-view-logs" data-job-id="${job.id}">查看日志</button>
+                        </div>
+                        <div class="job-logs" id="job-logs-${job.id}"></div>
+                    </div>
+                `;
+            }).join('');
+            
+            // 绑定删除按钮事件
+            jobsList.querySelectorAll('.btn-delete-job:not([disabled])').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const jobId = parseInt(e.target.getAttribute('data-job-id'));
+                    await handleDeleteJob(jobId);
+                });
+            });
+
+            // 绑定重试按钮事件
+            jobsList.querySelectorAll('.btn-retry-job').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const jobId = parseInt(e.target.getAttribute('data-job-id'));
+                    await handleRetryJob(jobId);
+                });
+            });
+            
+            // 绑定查看日志按钮事件
+            jobsList.querySelectorAll('.btn-view-logs').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    // 阻止事件冒泡，避免触发其他事件
+                    e.stopPropagation();
+                    e.preventDefault();
+                    
+                    const jobId = e.target.getAttribute('data-job-id');
+                    const logsEl = document.getElementById(`job-logs-${jobId}`);
+                    
+                    if (logsEl.classList.contains('show')) {
+                        // 隐藏日志
+                        logsEl.classList.remove('show');
+                        e.target.textContent = '查看日志';
+                    } else {
+                        // 展开日志
+                        // 检查缓存（仅对已完成的任务使用缓存）
+                        const job = jobs.find(j => j.id == jobId);
+                        const isJobFinished = job && ['completed', 'failed', 'canceled'].includes(job.status);
+                        
+                        if (isJobFinished && jobLogCache[jobId]) {
+                            // 使用缓存的日志
+                            logsEl.textContent = jobLogCache[jobId];
+                            logsEl.classList.add('show');
+                            e.target.textContent = '隐藏日志';
+                            logsEl.scrollTop = logsEl.scrollHeight;
+                        } else {
+                            // 从后端加载日志
+                            e.target.disabled = true;
+                            e.target.textContent = '加载中...';
+                            logsEl.textContent = 'Loading log...';
+                            logsEl.classList.add('show');
+                            
+                            try {
+                                // 从后端获取日志
+                                const res = await fetch(`${API_BASE}/jobs/${jobId}/log`);
+                                const data = await res.json();
+                                
+                                if (res.ok && data.content !== undefined) {
+                                    const logContent = data.content || 'No log available';
+                                    logsEl.textContent = logContent;
+                                    
+                                    // 缓存日志（仅对已完成的任务）
+                                    if (isJobFinished) {
+                                        jobLogCache[jobId] = logContent;
+                                    }
+                                } else {
+                                    logsEl.textContent = data.error || 'No log available';
+                                }
+                                
+                                // 滚动到底部
+                                logsEl.scrollTop = logsEl.scrollHeight;
+                            } catch (err) {
+                                logsEl.textContent = `Failed to load log: ${err.message}`;
+                            } finally {
+                                e.target.disabled = false;
+                                e.target.textContent = '隐藏日志';
+                            }
+                        }
+                    }
+                });
+            });
+            
+            // 恢复之前展开的日志区域状态
+            expandedLogs.forEach(jobId => {
+                const logsEl = document.getElementById(`job-logs-${jobId}`);
+                const btn = jobsList.querySelector(`.btn-view-logs[data-job-id="${jobId}"]`);
+                
+                if (logsEl && btn) {
+                    // 检查是否有缓存的日志内容
+                    const job = jobs.find(j => j.id == jobId);
+                    const isJobFinished = job && ['completed', 'failed', 'canceled'].includes(job.status);
+                    
+                    if (isJobFinished && jobLogCache[jobId]) {
+                        // 恢复缓存的日志
+                        logsEl.textContent = jobLogCache[jobId];
+                        logsEl.classList.add('show');
+                        btn.textContent = '隐藏日志';
+                        logsEl.scrollTop = logsEl.scrollHeight;
+                    } else {
+                        // 如果没有缓存，重新加载
+                        btn.disabled = true;
+                        btn.textContent = '加载中...';
+                        logsEl.textContent = 'Loading log...';
+                        logsEl.classList.add('show');
+                        
+                        fetch(`${API_BASE}/jobs/${jobId}/log`)
+                            .then(res => res.json().then(data => ({ res, data })))
+                            .then(({ res, data }) => {
+                                if (res.ok && data.content !== undefined) {
+                                    const logContent = data.content || 'No log available';
+                                    logsEl.textContent = logContent;
+                                    
+                                    if (isJobFinished) {
+                                        jobLogCache[jobId] = logContent;
+                                    }
+                                } else {
+                                    logsEl.textContent = data.error || 'No log available';
+                                }
+                                logsEl.scrollTop = logsEl.scrollHeight;
+                            })
+                            .catch(err => {
+                                logsEl.textContent = `Failed to load log: ${err.message}`;
+                            })
+                            .finally(() => {
+                                btn.disabled = false;
+                                btn.textContent = '隐藏日志';
+                            });
+                    }
+                }
+            });
+        }
+        
+        // API client: 删除单个任务
+        async function deleteJob(jobId) {
+            const res = await fetch(`${API_BASE}/jobs/${jobId}`, {
+                method: 'DELETE'
+            });
+            
+            const data = await res.json();
+            
+            if (!res.ok) {
+                const error = new Error(data.message || data.error || '删除失败');
+                error.status = res.status;
+                throw error;
+            }
+            
+            return data;
+        }
+        
+        // API client: 清除失败任务
+        async function clearFailedJobs() {
+            const res = await fetch(`${API_BASE}/jobs/clear-failed`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            
+            const data = await res.json();
+            
+            if (!res.ok) {
+                const error = new Error(data.message || data.error || '清除失败');
+                error.status = res.status;
+                throw error;
+            }
+            
+            return data;
+        }
+        
+        // 删除单个任务（UI handler）
+        async function handleDeleteJob(jobId) {
+            if (!confirm(`确认删除任务 #${jobId}？\n仅删除记录，不会删除已解压的文件。`)) {
+                return;
+            }
+            
+            try {
+                await deleteJob(jobId);
+                // 成功删除，刷新列表
+                showStatus('createJobStatus', `任务 #${jobId} 已删除`, false);
+                await fetchJobs();
+            } catch (err) {
+                // 错误原样抛出，toast 展示服务端 message
+                const errorMsg = err.message || '删除失败';
+                showStatus('createJobStatus', errorMsg, true);
+                
+                // 如果是404，刷新列表
+                if (err.status === 404) {
+                    await fetchJobs();
+                }
+            }
+        }
+        
+        // 清除失败任务（UI handler）
+        async function handleClearFailed() {
+            if (!confirm('确认清除所有失败任务？\n将删除所有 failed 状态任务，无法恢复。\n仅删除记录，不会删除已解压的文件。')) {
+                return;
+            }
+            
+            try {
+                const result = await clearFailedJobs();
+                // 成功：显示 deletedCount
+                showStatus('createJobStatus', `已清除 ${result.deletedCount || 0} 个失败任务`, false);
+                // 立即刷新列表
+                await fetchJobs();
+            } catch (err) {
+                // 错误原样抛出，toast 展示服务端 message
+                const errorMsg = err.message || '清除失败';
+                showStatus('createJobStatus', errorMsg, true);
+            }
+        }
+
+        // Retry job modal management
+        let currentRetryJobId = null;
+
+        function showRetryModal(jobId) {
+            currentRetryJobId = jobId;
+            document.getElementById('retryJobModal').style.display = 'flex';
+            document.getElementById('retryJobError').style.display = 'none';
+            
+            // Reset form
+            document.getElementById('retryPasswordNone').checked = true;
+            document.getElementById('retryPasswordSelectGroup').style.display = 'none';
+            document.getElementById('retryPasswordManualGroup').style.display = 'none';
+            document.getElementById('retryPasswordTryListHint').style.display = 'none';
+            document.getElementById('retryPasswordSelectDropdown').value = '';
+            document.getElementById('retryPasswordManualInput').value = '';
+            
+            // Update password dropdown
+            updateRetryPasswordSelectDropdown();
+        }
+
+        function hideRetryModal() {
+            document.getElementById('retryJobModal').style.display = 'none';
+            currentRetryJobId = null;
+        }
+
+        function updateRetryPasswordSelectDropdown() {
+            const dropdown = document.getElementById('retryPasswordSelectDropdown');
+            dropdown.innerHTML = '<option value="">请选择密码</option>';
+            
+            if (currentSettings && currentSettings.commonPasswords && currentSettings.commonPasswords.length > 0) {
+                currentSettings.commonPasswords.forEach((pwd, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    const preview = getPasswordPreview(pwd);
+                    option.textContent = `${preview} (#${index + 1})`;
+                    dropdown.appendChild(option);
+                });
+            }
+        }
+
+        // Retry password mode change handlers
+        document.querySelectorAll('input[name="retryPasswordMode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const mode = e.target.value;
+                document.getElementById('retryPasswordSelectGroup').style.display = mode === 'select' ? 'block' : 'none';
+                document.getElementById('retryPasswordManualGroup').style.display = mode === 'manual' ? 'block' : 'none';
+                document.getElementById('retryPasswordTryListHint').style.display = mode === 'try_list' ? 'block' : 'none';
+                
+                if (mode === 'select') {
+                    updateRetryPasswordSelectDropdown();
+                }
+            });
+        });
+
+        // 安全地添加事件监听器（如果元素存在）
+        const closeRetryModalEl = document.getElementById('closeRetryModal');
+        const cancelRetryBtnEl = document.getElementById('cancelRetryBtn');
+        const confirmRetryBtnEl = document.getElementById('confirmRetryBtn');
+        
+        if (closeRetryModalEl) {
+            closeRetryModalEl.addEventListener('click', hideRetryModal);
+        }
+        if (cancelRetryBtnEl) {
+            cancelRetryBtnEl.addEventListener('click', hideRetryModal);
+        }
+
+        if (confirmRetryBtnEl) {
+            confirmRetryBtnEl.addEventListener('click', async () => {
+            if (!currentRetryJobId) {
+                return;
+            }
+
+            const passwordMode = document.querySelector('input[name="retryPasswordMode"]:checked').value;
+            const retryBody = { passwordMode };
+
+            // Validate and add password fields
+            if (passwordMode === 'select') {
+                const passwordRefIndex = parseInt(document.getElementById('retryPasswordSelectDropdown').value);
+                if (isNaN(passwordRefIndex) || passwordRefIndex < 0) {
+                    document.getElementById('retryJobError').textContent = '请选择常用密码';
+                    document.getElementById('retryJobError').style.display = 'block';
+                    return;
+                }
+                retryBody.passwordRefIndex = passwordRefIndex;
+                // Log selected password preview (for user confirmation)
+                const selectedPwd = currentSettings?.commonPasswords?.[passwordRefIndex];
+                if (selectedPwd) {
+                    const preview = getPasswordPreview(selectedPwd);
+                    console.log('[retry] Selected password preview:', `${preview} (#${passwordRefIndex + 1})`);
+                }
+            } else if (passwordMode === 'manual') {
+                const passwordValue = document.getElementById('retryPasswordManualInput').value.trim();
+                if (!passwordValue) {
+                    document.getElementById('retryJobError').textContent = '请输入解压密码';
+                    document.getElementById('retryJobError').style.display = 'block';
+                    return;
+                }
+                retryBody.passwordValue = passwordValue;
+            } else if (passwordMode === 'try_list') {
+                const commonPasswords = currentSettings?.commonPasswords || [];
+                if (commonPasswords.length === 0) {
+                    document.getElementById('retryJobError').textContent = '常用密码列表为空，请前往设置页面添加密码';
+                    document.getElementById('retryJobError').style.display = 'block';
+                    return;
+                }
+            }
+
+            // Disable button
+            const btn = document.getElementById('confirmRetryBtn');
+            btn.disabled = true;
+            btn.textContent = '重试中...';
+
+            try {
+                const res = await fetch(`${API_BASE}/jobs/${currentRetryJobId}/retry`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(retryBody)
+                });
+
+                const data = await res.json();
+
+                if (!res.ok || data.error) {
+                    const errorMsg = data.error || data.message || '重试失败';
+                    document.getElementById('retryJobError').textContent = errorMsg;
+                    document.getElementById('retryJobError').style.display = 'block';
+                    return;
+                }
+
+                // Success
+                hideRetryModal();
+                showStatus('createJobStatus', `已创建重试任务 #${data.jobId}`, false);
+                await fetchJobs();
+            } catch (err) {
+                document.getElementById('retryJobError').textContent = `重试失败: ${err.message}`;
+                document.getElementById('retryJobError').style.display = 'block';
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '确认重试';
+                }
+            }
+            });
+        }
+
+        // Retry job handler
+        async function handleRetryJob(jobId) {
+            // Load settings first to ensure password dropdown is populated
+            try {
+                const settingsRes = await fetch(`${API_BASE}/settings`);
+                if (settingsRes.ok) {
+                    const settings = await settingsRes.json();
+                    currentSettings = settings;
+                }
+            } catch (err) {
+                console.error('Failed to load settings for retry:', err);
+            }
+
+            showRetryModal(jobId);
+        }
+        
+        // 开始轮询
+        function startPolling() {
+            if (pollInterval) return;
+            
+            fetchJobs(); // 立即获取一次
+            pollInterval = setInterval(fetchJobs, 2000);
+        }
+        
+        // 停止轮询
+        function stopPolling() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        }
+        
+        // 工具函数
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+            return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+        }
+        
+        function formatTime(timestamp) {
+            if (!timestamp) return '';
+            return new Date(timestamp).toLocaleString('zh-CN');
+        }
+        
+        function getStatusText(status) {
+            const map = {
+                'pending': '等待中',
+                'running': '运行中',
+                'success': '成功',
+                'failed': '失败',
+                'skipped': '跳过',
+                'canceled': '已取消',
+                'completed': '已完成',
+                'paused': '已暂停',
+                'draft': '草稿',
+                'queued': '队列中',
+                'pausing': '暂停中',
+                'canceling': '取消中'
+            };
+            return map[status] || status;
+        }
+        
+        // 绑定清空失败按钮
+        document.getElementById('clearFailedBtn').addEventListener('click', handleClearFailed);
+        
+        // ========== Directory Selector ==========
+        let currentDirPath = '/';
+        let dirSelectorLoading = false;
+        
+        // Directory selector modal management
+        function showDirSelector() {
+            const modal = document.getElementById('dirSelectorModal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            currentDirPath = '/';
+            loadDirRoots();
+        }
+        
+        function hideDirSelector() {
+            const modal = document.getElementById('dirSelectorModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        async function loadDirRoots() {
+            if (dirSelectorLoading) return;
+            dirSelectorLoading = true;
+            
+            const loadingEl = document.getElementById('dirSelectorLoading');
+            const errorEl = document.getElementById('dirSelectorError');
+            const listEl = document.getElementById('dirSelectorList');
+            const pathEl = document.getElementById('dirSelectorCurrentPath');
+            
+            if (loadingEl) loadingEl.style.display = 'block';
+            if (errorEl) errorEl.style.display = 'none';
+            if (listEl) listEl.innerHTML = '';
+            
+            try {
+                const res = await fetch(`${API_BASE}/fs/roots`);
+                const data = await res.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                if (data.roots && data.roots.length > 0) {
+                    // Sort roots by source priority (already sorted by backend, but ensure frontend respects it)
+                    const sortedRoots = [...data.roots].sort((a, b) => {
+                        const sourcePriority = { 'data-share': 0, 'trim': 1, 'probe': 2, 'fallback': 3 };
+                        const priorityA = sourcePriority[a.source] ?? 99;
+                        const priorityB = sourcePriority[b.source] ?? 99;
+                        if (priorityA !== priorityB) {
+                            return priorityA - priorityB;
+                        }
+                        return a.path.localeCompare(b.path);
+                    });
+                    
+                    renderDirList(sortedRoots.map((r) => ({
+                        name: r.label,
+                        path: r.path,
+                        isDir: true,
+                        source: r.source
+                    })));
+                    currentDirPath = '/';
+                    if (pathEl) pathEl.textContent = 'Root';
+                } else {
+                    if (listEl) listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">没有可访问的根目录</div>';
+                }
+            } catch (err) {
+                if (errorEl) {
+                    errorEl.textContent = `加载失败: ${err.message}`;
+                    errorEl.style.display = 'block';
+                }
+            } finally {
+                if (loadingEl) loadingEl.style.display = 'none';
+                dirSelectorLoading = false;
+            }
+        }
+        
+        async function loadDirList(path) {
+            if (dirSelectorLoading) return;
+            dirSelectorLoading = true;
+            
+            const loadingEl = document.getElementById('dirSelectorLoading');
+            const errorEl = document.getElementById('dirSelectorError');
+            const listEl = document.getElementById('dirSelectorList');
+            const pathEl = document.getElementById('dirSelectorCurrentPath');
+            
+            if (loadingEl) loadingEl.style.display = 'block';
+            if (errorEl) errorEl.style.display = 'none';
+            if (listEl) listEl.innerHTML = '';
+            
+            try {
+                const res = await fetch(`${API_BASE}/fs/list?path=${encodeURIComponent(path)}`);
+                const data = await res.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                currentDirPath = data.path;
+                if (pathEl) pathEl.textContent = data.path;
+                
+                if (data.items && data.items.length > 0) {
+                    renderDirList(data.items.filter((item) => item.isDir));
+                } else {
+                    if (listEl) listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">此目录为空</div>';
+                }
+            } catch (err) {
+                if (errorEl) {
+                    errorEl.textContent = `加载失败: ${err.message}`;
+                    errorEl.style.display = 'block';
+                }
+            } finally {
+                if (loadingEl) loadingEl.style.display = 'none';
+                dirSelectorLoading = false;
+            }
+        }
+        
+        function renderDirList(items) {
+            const listEl = document.getElementById('dirSelectorList');
+            if (!listEl) return;
+            
+            if (items.length === 0) {
+                listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">此目录为空</div>';
+                return;
+            }
+            
+            listEl.innerHTML = items.map(item => {
+                const itemPath = escapeHtml(item.path);
+                const itemName = escapeHtml(item.name);
+                return '<div class="dir-item" data-path="' + itemPath + '" style="padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; gap: 10px;" onmouseover="this.style.background=\'#f5f5f5\'" onmouseout="this.style.background=\'white\'">' +
+                    '<span style="font-size: 18px;">📁</span>' +
+                    '<span style="flex: 1;">' + itemName + '</span>' +
+                    '</div>';
+            }).join('');
+            
+            // Add click handlers
+            listEl.querySelectorAll('.dir-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    const path = el.getAttribute('data-path');
+                    if (path) {
+                        loadDirList(path);
+                    }
+                });
+            });
+        }
+        
+        function goToParentDir() {
+            if (currentDirPath === '/' || currentDirPath === '') {
+                loadDirRoots();
+                return;
+            }
+            const parentPath = getParentPath(currentDirPath);
+            if (parentPath === currentDirPath) {
+                loadDirRoots();
+            } else {
+                loadDirList(parentPath);
+            }
+        }
+        
+        function getParentPath(p) {
+            const normalized = p.replace(/\\/g, '/');
+            const parts = normalized.split('/').filter(x => x);
+            if (parts.length === 0) return '/';
+            if (parts.length === 1) return '/';
+            return '/' + parts.slice(0, -1).join('/');
+        }
+        
+        function selectCurrentDir() {
+            const rootPathInput = document.getElementById('rootPath');
+            if (rootPathInput) {
+                rootPathInput.value = currentDirPath;
+            }
+            hideDirSelector();
+        }
+        
+        // Bind directory selector events
+        const selectDirBtn = document.getElementById('selectDirBtn');
+        if (selectDirBtn) {
+            selectDirBtn.addEventListener('click', showDirSelector);
+        }
+        
+        const closeDirSelector = document.getElementById('closeDirSelector');
+        if (closeDirSelector) {
+            closeDirSelector.addEventListener('click', hideDirSelector);
+        }
+        
+        const dirSelectorCancel = document.getElementById('dirSelectorCancel');
+        if (dirSelectorCancel) {
+            dirSelectorCancel.addEventListener('click', hideDirSelector);
+        }
+        
+        const dirSelectorConfirm = document.getElementById('dirSelectorConfirm');
+        if (dirSelectorConfirm) {
+            dirSelectorConfirm.addEventListener('click', selectCurrentDir);
+        }
+        
+        const dirSelectorGoRoot = document.getElementById('dirSelectorGoRoot');
+        if (dirSelectorGoRoot) {
+            dirSelectorGoRoot.addEventListener('click', loadDirRoots);
+        }
+        
+        const dirSelectorGoUp = document.getElementById('dirSelectorGoUp');
+        if (dirSelectorGoUp) {
+            dirSelectorGoUp.addEventListener('click', goToParentDir);
+        }
+        
+        // 加载版本号
+        async function loadVersion() {
+            try {
+                const res = await fetch('/version.json');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('versionText').textContent = data.version || 'unknown';
+                } else {
+                    document.getElementById('versionText').textContent = 'unknown';
+                }
+            } catch (err) {
+                console.error('Failed to load version:', err);
+                document.getElementById('versionText').textContent = 'unknown';
+            }
+        }
+        
+        // ========== Dark Mode ==========
+        function initDarkMode() {
+            // 检查 localStorage 中的用户偏好
+            const savedMode = localStorage.getItem('darkMode');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            let isDarkMode = false;
+            
+            if (savedMode !== null) {
+                // 用户已手动设置过
+                isDarkMode = savedMode === 'true';
+            } else {
+                // 默认跟随系统设置
+                isDarkMode = prefersDark;
+            }
+            
+            applyDarkMode(isDarkMode);
+            
+            // 监听系统主题变化（仅在未手动设置时）
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                if (localStorage.getItem('darkMode') === null) {
+                    applyDarkMode(e.matches);
+                }
+            });
+        }
+        
+        function applyDarkMode(isDark) {
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                document.getElementById('darkModeIcon').textContent = '☀️';
+                document.getElementById('darkModeText').textContent = '浅色模式';
+            } else {
+                document.body.classList.remove('dark-mode');
+                document.getElementById('darkModeIcon').textContent = '🌙';
+                document.getElementById('darkModeText').textContent = '暗黑模式';
+            }
+        }
+        
+        function toggleDarkMode() {
+            const isDark = document.body.classList.contains('dark-mode');
+            const newMode = !isDark;
+            applyDarkMode(newMode);
+            localStorage.setItem('darkMode', newMode.toString());
+        }
+        
+        // 绑定暗黑模式切换按钮
+        document.getElementById('darkModeToggle').addEventListener('click', toggleDarkMode);
+        
+        // 初始化暗黑模式
+        initDarkMode();
+        
+        // 初始化
+        loadVersion();
+        checkHealth().then(ok => {
+            if (ok) {
+                startPolling();
+            } else {
+                showStatus('scanStatus', '无法连接到服务器，请检查服务是否运行', true);
+            }
+        });
+        
+        // 页面卸载时停止轮询
+        window.addEventListener('beforeunload', stopPolling);
+
+        // ========== Job Detail Page ==========
+        let jobDetailPollInterval = null;
+        let currentJobId = null;
+        let jobDetailData = null;
+
+        // Back button
+        document.getElementById('backToJobsBtn').addEventListener('click', () => {
+            window.location.hash = '';
+            showPage('pageHome');
+        });
+
+        // API: Fetch job detail
+        async function fetchJobDetail(jobId) {
+            try {
+                const res = await fetch(`${API_BASE}/jobs/${jobId}`);
+                const data = await res.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                return data;
+            } catch (err) {
+                throw err;
+            }
+        }
+
+        // Load job detail
+        async function loadJobDetail(jobId) {
+            currentJobId = jobId;
+            const errorBanner = document.getElementById('jobDetailError');
+            const content = document.getElementById('jobDetailContent');
+            
+            try {
+                const data = await fetchJobDetail(jobId);
+                jobDetailData = data;
+                
+                errorBanner.classList.remove('show');
+                content.style.display = 'block';
+                
+                renderJobDetail(data.job, data.items);
+                
+                // Start auto refresh if enabled
+                if (document.getElementById('autoRefreshToggle').checked) {
+                    startJobDetailPolling();
+                }
+            } catch (err) {
+                errorBanner.textContent = `加载失败: ${err.message}`;
+                errorBanner.classList.add('show');
+                content.style.display = 'none';
+            }
+        }
+
+        // Render job detail
+        function renderJobDetail(job, items) {
+            // Summary
+            document.getElementById('jobDetailId').textContent = job.id;
+            document.getElementById('jobDetailRootPath').textContent = job.root_path || '-';
+            
+            const statusText = getStatusText(job.status);
+            const statusClass = job.status || 'pending';
+            const statusEl = document.getElementById('jobDetailStatus');
+            statusEl.innerHTML = ''; // Clear first
+            const statusTag = document.createElement('span');
+            statusTag.className = `status-tag ${escapeHtml(statusClass)}`;
+            statusTag.textContent = statusText;
+            statusEl.appendChild(statusTag);
+            
+            // Progress
+            const total = job.total || 0;
+            const done = (job.success || 0) + (job.failed || 0) + (job.skipped || 0) + (job.canceled || 0);
+            const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+            const progressBar = document.getElementById('jobDetailProgressBar');
+            progressBar.style.width = `${percent}%`;
+            progressBar.textContent = `${percent}% (${done}/${total})`;
+            
+            // Counts
+            document.getElementById('jobDetailSuccess').textContent = job.success || 0;
+            document.getElementById('jobDetailFailed').textContent = job.failed || 0;
+            document.getElementById('jobDetailSkipped').textContent = job.skipped || 0;
+            document.getElementById('jobDetailCanceled').textContent = job.canceled || 0;
+            document.getElementById('jobDetailTotal').textContent = total;
+            
+            // Times
+            document.getElementById('jobDetailCreatedAt').textContent = formatTime(job.created_at) || '-';
+            document.getElementById('jobDetailStartedAt').textContent = formatTime(job.started_at) || '-';
+            
+            const endedAtEl = document.getElementById('jobDetailEndedAt');
+            if (job.ended_at) {
+                endedAtEl.textContent = formatTime(job.ended_at);
+            } else if (job.started_at) {
+                const elapsed = Math.floor((Date.now() - job.started_at) / 1000);
+                endedAtEl.textContent = `运行中... (已运行 ${elapsed} 秒)`;
+            } else {
+                endedAtEl.textContent = '-';
+            }
+            
+            // Items table
+            renderJobItems(items);
+        }
+
+        // Render job items
+        function renderJobItems(items) {
+            const filterFailed = document.getElementById('filterFailed').checked;
+            let filteredItems = items;
+            
+            if (filterFailed) {
+                filteredItems = items.filter(item => item.status === 'failed');
+            }
+            
+            const tableBody = document.getElementById('jobDetailItemsTable');
+            
+            if (filteredItems.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 20px; color: #999;">
+                            ${filterFailed ? '没有失败的任务项' : '暂无任务项'}
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tableBody.innerHTML = filteredItems.map(item => {
+                const statusClass = item.status || 'pending';
+                const statusText = getStatusText(item.status);
+                
+                // Calculate duration
+                let duration = '-';
+                if (item.started_at && item.ended_at) {
+                    const ms = item.ended_at - item.started_at;
+                    if (ms < 1000) {
+                        duration = `${ms}ms`;
+                    } else {
+                        duration = `${(ms / 1000).toFixed(1)}s`;
+                    }
+                }
+                
+                // Truncate path
+                const fullPath = item.archive_path || '-';
+                const truncatedPath = fullPath.length > 50 ? fullPath.substring(0, 47) + '...' : fullPath;
+                
+                return `
+                    <tr>
+                        <td class="path-cell" style="position: relative;">
+                            <span>${escapeHtml(truncatedPath)}</span>
+                            <span class="path-full">${escapeHtml(fullPath)}</span>
+                            <button class="copy-btn" data-copy-path="${escapeHtml(fullPath).replace(/"/g, '&quot;')}" onclick="copyToClipboard(this.getAttribute('data-copy-path'))">复制</button>
+                        </td>
+                        <td>
+                            <span class="status-tag ${escapeHtml(statusClass)}">${escapeHtml(statusText)}</span>
+                        </td>
+                        <td>
+                            ${item.failed_detail ? escapeHtml(item.failed_detail) : '-'}
+                            ${item.failed_detail ? `<button class="copy-btn" data-copy-detail="${escapeHtml(item.failed_detail).replace(/"/g, '&quot;')}" onclick="copyToClipboard(this.getAttribute('data-copy-detail'))">复制</button>` : ''}
+                        </td>
+                        <td>
+                            ${item.out_dir ? escapeHtml(item.out_dir) : '-'}
+                            ${item.out_dir ? `<button class="copy-btn" onclick="copyToClipboard('${escapeHtml(item.out_dir).replace(/'/g, "\\'")}')">复制</button>` : ''}
+                        </td>
+                        <td>${duration}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Copy to clipboard
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const toast = document.getElementById('toast');
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 2000);
+            }).catch(err => {
+                console.error('Copy failed:', err);
+            });
+        }
+
+        // Start polling
+        function startJobDetailPolling() {
+            stopJobDetailPolling();
+            
+            const interval = parseInt(document.getElementById('refreshInterval').value) || 2000;
+            
+            jobDetailPollInterval = setInterval(async () => {
+                if (!currentJobId) return;
+                
+                try {
+                    const data = await fetchJobDetail(currentJobId);
+                    jobDetailData = data;
+                    
+                    renderJobDetail(data.job, data.items);
+                    
+                    // Stop polling if job is in final state
+                    const finalStates = ['completed', 'failed', 'canceled'];
+                    if (finalStates.includes(data.job.status)) {
+                        stopJobDetailPolling();
+                    }
+                } catch (err) {
+                    // Show error but keep last data
+                    const errorBanner = document.getElementById('jobDetailError');
+                    errorBanner.textContent = `刷新失败: ${err.message} (保留上次数据)`;
+                    errorBanner.classList.add('show');
+                }
+            }, interval);
+        }
+
+        // Stop polling
+        function stopJobDetailPolling() {
+            if (jobDetailPollInterval) {
+                clearInterval(jobDetailPollInterval);
+                jobDetailPollInterval = null;
+            }
+        }
+
+        // Auto refresh toggle
+        document.getElementById('autoRefreshToggle').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                startJobDetailPolling();
+            } else {
+                stopJobDetailPolling();
+            }
+        });
+
+        // Refresh interval change
+        document.getElementById('refreshInterval').addEventListener('change', () => {
+            if (document.getElementById('autoRefreshToggle').checked) {
+                startJobDetailPolling();
+            }
+        });
+
+        // Filter failed toggle
+        document.getElementById('filterFailed').addEventListener('change', () => {
+            if (jobDetailData) {
+                renderJobItems(jobDetailData.items);
+            }
+        });
+
+        // Manual refresh
+        document.getElementById('manualRefreshBtn').addEventListener('click', () => {
+            if (currentJobId) {
+                loadJobDetail(currentJobId);
+            }
+        });
+
+        // Stop polling when leaving page
+        window.addEventListener('hashchange', () => {
+            const hash = window.location.hash;
+            if (!hash.startsWith('#jobs/')) {
+                stopJobDetailPolling();
+                currentJobId = null;
+            }
+        });
+    </script>
+</body>
+</html>
+

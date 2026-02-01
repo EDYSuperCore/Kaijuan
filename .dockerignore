@@ -1,0 +1,51 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Data and logs
+data/
+*.log
+*.db
+
+# Node modules (will be installed in container)
+node_modules/
+**/node_modules/
+
+# Build artifacts
+dist/
+build/
+*.tar
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Scripts
+*.sh
+!docker-build-push.sh
+
+# Reports
+*_REPORT.md
+*_ANALYSIS.md
+
+# Temporary files
+*.tmp
+*.bak
+.cache/
