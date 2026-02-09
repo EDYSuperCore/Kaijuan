@@ -35,28 +35,25 @@ export async function resolve7zPath(): Promise<string> {
   const platform = os.platform();
   const arch = os.arch();
 
-  // Only support Linux
-  if (platform !== 'linux') {
-    throw new Error(`Unsupported platform: ${platform}. This application only supports Linux/WSL.`);
-  }
-
   // Get application root
   const appRoot = getAppRoot();
   
   // Build candidate paths
   const candidates: string[] = [];
   
-  // Priority 1: Bundled 7zz (x64 first, then arm64)
-  if (arch === 'x64') {
-    candidates.push(path.join(appRoot, 'server', 'vendor', '7zip', 'linux-x64', '7zz'));
-    candidates.push(path.join(appRoot, 'server', 'vendor', '7zip', 'linux-arm64', '7zz'));
-  } else if (arch === 'arm64') {
-    candidates.push(path.join(appRoot, 'server', 'vendor', '7zip', 'linux-arm64', '7zz'));
-    candidates.push(path.join(appRoot, 'server', 'vendor', '7zip', 'linux-x64', '7zz'));
-  } else {
-    // For other architectures, try both
-    candidates.push(path.join(appRoot, 'server', 'vendor', '7zip', 'linux-x64', '7zz'));
-    candidates.push(path.join(appRoot, 'server', 'vendor', '7zip', 'linux-arm64', '7zz'));
+  // Priority 1: Bundled 7zz (x64 first, then arm64) on Linux only
+  if (platform === 'linux') {
+    if (arch === 'x64') {
+      candidates.push(path.join(appRoot, 'server', 'vendor', '7zip', 'linux-x64', '7zz'));
+      candidates.push(path.join(appRoot, 'server', 'vendor', '7zip', 'linux-arm64', '7zz'));
+    } else if (arch === 'arm64') {
+      candidates.push(path.join(appRoot, 'server', 'vendor', '7zip', 'linux-arm64', '7zz'));
+      candidates.push(path.join(appRoot, 'server', 'vendor', '7zip', 'linux-x64', '7zz'));
+    } else {
+      // For other architectures, try both
+      candidates.push(path.join(appRoot, 'server', 'vendor', '7zip', 'linux-x64', '7zz'));
+      candidates.push(path.join(appRoot, 'server', 'vendor', '7zip', 'linux-arm64', '7zz'));
+    }
   }
   
   // Priority 2: System commands (fallback)
@@ -113,6 +110,7 @@ export async function resolve7zPath(): Promise<string> {
   
   throw new Error(
     '7z not found: bundled 7zz missing and system 7z/7zz not installed. ' +
-    'On Debian/Ubuntu: sudo apt install p7zip-full'
+    'On Debian/Ubuntu: sudo apt install p7zip-full. ' +
+    'On macOS: brew install p7zip'
   );
 }

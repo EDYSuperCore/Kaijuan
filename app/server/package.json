@@ -10,20 +10,20 @@
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
-    "fastify": "^4.24.3",
     "@fastify/static": "^6.12.0",
+    "bootstrap-icons": "^1.13.1",
     "execa": "^8.0.1",
+    "fastify": "^4.24.3",
     "sqlite3": "^5.1.6"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/sqlite3": "^3.1.11",
     "@vercel/ncc": "^0.38.1",
-    "typescript": "^5.0.0",
-    "tsx": "^4.7.0"
+    "tsx": "^4.7.0",
+    "typescript": "^5.0.0"
   },
   "engines": {
     "node": ">=14.0.0"
   }
 }
-

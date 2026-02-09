@@ -27,6 +27,13 @@ COPY app/server/src ./src
 # Build TypeScript
 RUN npm run build
 
+# Build frontend (Vue + Vite)
+WORKDIR /app/app/web
+COPY app/web/package.json ./package.json
+RUN npm install
+COPY app/web ./
+RUN npm run build
+
 # Production stage
 FROM node:20-slim
 
@@ -51,9 +58,9 @@ RUN npm ci --only=production && \
 # Copy built files from builder
 COPY --from=builder /app/app/server/dist ./dist
 
-# Copy static frontend files
+# Copy static frontend files (built by Vite)
 WORKDIR /app
-COPY app/www ./www
+COPY --from=builder /app/app/www ./www
 
 # Generate version.json file (required by backend/frontend)
 # Build arguments for version info (can be passed during build: --build-arg GIT_SHA=xxx)
