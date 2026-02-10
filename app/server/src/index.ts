@@ -31,7 +31,7 @@ import { CreateJobOptions, DEFAULT_SETTINGS, ConflictPolicy, JobOptions, OutputM
 import { resolve7zPath } from './infra/7z-resolver';
 import { getSettings, updateSettings } from './services/settingsService';
 
-const app = fastify({ logger: true });
+const app = fastify({ logger: false });
 
 // Initialize database
 const varDir = getVarDir();
@@ -95,23 +95,6 @@ app.get('/api/settings', async (request, reply) => {
 app.put('/api/settings', async (request: any, reply) => {
   try {
     const { conflict, outputMode, zipSlipPolicy, commonPasswords, passwordMasking } = request.body;
-
-    // Log request with password masking (for debugging, no full passwords)
-    const logBody: any = {
-      conflict,
-      outputMode,
-      zipSlipPolicy,
-      passwordMasking
-    };
-    if (commonPasswords && Array.isArray(commonPasswords)) {
-      logBody.commonPasswordsCount = commonPasswords.length;
-      logBody.commonPasswordsPreview = commonPasswords.map((pwd: string, idx: number) => {
-        const previewLen = 4;
-        const prefix = pwd ? pwd.slice(0, Math.min(previewLen, pwd.length)) : '';
-        return `${prefix}••••(#${idx + 1})`;
-      });
-    }
-    console.log('[settings] PUT /api/settings request', logBody);
 
     // Validate that only allowed fields are present
     const allowedFields = ['conflict', 'outputMode', 'zipSlipPolicy', 'commonPasswords', 'passwordMasking'];
